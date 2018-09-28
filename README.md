@@ -26,7 +26,7 @@ This is a work in progress. It is currently functional, but needs:
 - Additional troubleshooting over extension add-on compatibility
 - Example/default icons
 
-What it Does
+## What it Does
 
 1. Creates Home and Work copies of the Firefox Application
    - Separate applications allow Command+Tab switching
