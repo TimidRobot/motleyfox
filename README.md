@@ -25,6 +25,7 @@ the trademark for "Firefox":
   - Google's core business plan depends on compromising user privacy
     - [Measuring the Filter Bubble: How Google is influencing what you
       click][bubble]
+    - [Privacy concerns regarding Google - Wikipedia][concerns]
 - Enjoy capabilities offered by Mozilla Firefox for all online identities
   (Home, Work, etc.):
   - Vertical Tabs: [Tree Style Tab – Add-ons for Firefox][treestyle]
@@ -36,6 +37,7 @@ the trademark for "Firefox":
 [donechrome]:https://blog.cryptographyengineering.com/2018/09/23/why-im-leaving-chrome/
 [cookies]:https://twitter.com/ctavan/status/1044282084020441088
 [bubble]: https://spreadprivacy.com/google-filter-bubble-study/
+[concerns]: https://en.wikipedia.org/wiki/Privacy_concerns_regarding_Google
 [treestyle]:https://addons.mozilla.org/en-US/firefox/addon/tree-style-tab/
 
 
