@@ -16,11 +16,15 @@ the trademark for "Firefox":
 ## Goals
 
 - Complete identity separation
-- Avoid using Google Chrome due the changes in v69 that enabled:
-  - Default Chrome Login: [Why I’m done with Chrome – A Few Thoughts on
-    Cryptographic Engineering][donechrome]
-  - Cooking hoarding: [Christoph Tavan on Twitter: ""Clear all Cookies except
-    Google Cookies", thanks Chrome. /cc @matthew_d_green… "][cookies]
+- Avoid using Google Chromei
+  - Due the changes in v69 that enabled:
+    - Default Chrome Login: [Why I’m done with Chrome – A Few Thoughts on
+      Cryptographic Engineering][donechrome]
+    - Cooking hoarding: [Christoph Tavan on Twitter: "'Clear all Cookies except
+      Google Cookies', thanks Chrome."][cookies]
+  - Google's core business plan depends on compromising user privacy
+    - [Measuring the Filter Bubble: How Google is influencing what you click]
+      [bubble]
 - Enjoy capabilities offered by Mozilla Firefox for all online identities
   (Home, Work, etc.):
   - Vertical Tabs: [Tree Style Tab – Add-ons for Firefox][treestyle]
@@ -31,6 +35,7 @@ the trademark for "Firefox":
 
 [donechrome]:https://blog.cryptographyengineering.com/2018/09/23/why-im-leaving-chrome/
 [cookies]:https://twitter.com/ctavan/status/1044282084020441088
+[bubble]: https://spreadprivacy.com/google-filter-bubble-study/
 [treestyle]:https://addons.mozilla.org/en-US/firefox/addon/tree-style-tab/
 
 
@@ -44,7 +49,6 @@ the script defaults to the equivalent of:
 ```shell
 ./motleyfox Home:navy Work:gray
 ```
-
 
 For each `NAME` or (`NAME:COLOR`) it is invoked with, it:
 1. Creates dedicated profiles, if it does not already exist
@@ -79,7 +83,7 @@ Some plugins are known to rely on these values to function:
   - [LICENSE](LICENSE) (Expat License/[MIT License][mit])
 - [Firefox, Decorative Outline Icon - Icons8][icons8]
   - [CC BY-ND 3.0][ccbynd]
-  - Style is Cute Outline, Dotted
+  - Icon style: Cute Outline, Dotted
 
 [mit]:http://www.opensource.org/licenses/MIT
 [icons8]:https://icons8.com/icon/set/firefox/wired
