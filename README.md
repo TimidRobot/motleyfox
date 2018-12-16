@@ -23,8 +23,8 @@ the trademark for "Firefox":
     - Cooking hoarding: [Christoph Tavan on Twitter: "'Clear all Cookies except
       Google Cookies', thanks Chrome."][cookies]
   - Google's core business plan depends on compromising user privacy
-    - [Measuring the Filter Bubble: How Google is influencing what you click]
-      [bubble]
+    - [Measuring the Filter Bubble: How Google is influencing what you
+      click][bubble]
 - Enjoy capabilities offered by Mozilla Firefox for all online identities
   (Home, Work, etc.):
   - Vertical Tabs: [Tree Style Tab – Add-ons for Firefox][treestyle]
