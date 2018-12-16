@@ -171,8 +171,7 @@ create_profile() {
     local _path_macos="/Applications/${_app}/Contents/MacOS"
     local _path_profile="${_profiles}/${_name_lower}"
     echo '# Creating Firefox profile'
-    echo "#   profile_name: ${_name_lower}"
-    echo '#     (see launcher script for full profile path)'
+    echo "#   profile_path: ${_path_profile/${HOME}/~}"
     # Return immediately if profile already exists
     if [[ -d "${_path_profile}" ]]
     then
