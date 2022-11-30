@@ -16,7 +16,7 @@ the trademark for "Firefox":
 ## Goals
 
 - Complete identity separation
-- Avoid using Google Chromei
+- Avoid using Google Chrome
   - Due the changes in v69 that enabled:
     - Default Chrome Login: [Why I’m done with Chrome – A Few Thoughts on
       Cryptographic Engineering][donechrome]
