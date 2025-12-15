@@ -1,7 +1,7 @@
 # motleyfox
 
 Create discrete Firefox applications to allow clean and complete online
-identity separation.
+identity separation with clear app switching.
 
 This project is in no way associated with Firefox. Mozilla owns
 the trademark for "Firefox":
