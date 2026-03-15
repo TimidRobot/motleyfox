@@ -4,6 +4,7 @@ set -o errexit
 set -o errtrace
 set -o nounset
 
+# shellcheck disable=SC2154
 trap '_es=${?};
     _lo=${LINENO};
     _co=${BASH_COMMAND};
@@ -11,6 +12,15 @@ trap '_es=${?};
     exit ${_es}' ERR
 
 ARGS=()
+# https://en.wikipedia.org/wiki/ANSI_escape_code
+E0="$(printf "\e[0m")"        # reset
+E30="$(printf "\e[30m")"      # foreground: black
+E33="$(printf "\e[33m")"      # foreground: yellow
+E97="$(printf "\e[97m")"      # foreground: bright white
+E107="$(printf "\e[107m")"    # background: bright white
+I4='    '
+I8='        '
+PROFILES="${HOME}/Library/Application Support/Firefox/Profiles"
 PROG="${0##*/}"
 USAGE="\
 Usage:  ${PROG} [NAME[:COLOR]..]
@@ -27,18 +37,37 @@ Arguments:
     NAME        For each NAME, ${PROG} will create a Firefox-Name application
                 copy and a firefox-name profile. It is expected that NAME is a
                 single Titlecase or UPPERCASE word. \"Help\" is an invalid NAME.
-    NAME:COLOR  Optinally, an icon color (see icons/) maybe specified.
+    NAME:COLOR  Optinally, an icon color (see icons/) maybe specified. Default
+                Arguments: Home:navy Work:gray
 "
-PROFILES="${HOME}/Library/Application Support/Firefox/Profiles"
 
 
 #### FUNCTIONS ################################################################
 
 
-help_print() {
-    # Print help/usage
-    echo "${USAGE}"
-    exit
+add_launch_script() {
+    local _app _name_lower _name_title _path_app _path_contents _path_macos
+    local _path_profile _profiles
+    _name_title="${1}"
+    _name_lower="${2}"
+    _profiles="${3}"
+    _app="${_name_title}.app"
+    _path_app="/Applications/${_app}"
+    _path_contents="${_path_app}/Contents"
+    _path_macos="/Applications/${_app}/Contents/MacOS"
+    _path_profile="${_profiles}/${_name_lower}"
+    echo "${I4}creating launcher script"
+    {
+        echo '#!/bin/sh'
+        echo "exec ${_path_macos}/firefox \\"
+        echo "${I4}-no-remote \\"
+        echo "${I4}--profile \\"
+        echo "${I4}'${_path_profile}' \\"
+        echo "${I4}2>/dev/null &"
+    } > "${_path_macos}/${_name_lower}"
+    chmod 0755 "${_path_macos}/${_name_lower}"
+    ln -sf "${_path_macos}/${_name_lower}" ~/bin/"${_name_lower}"
+    echo "${I8}script name: ${_name_lower}"
 }
 
 
@@ -52,14 +81,15 @@ create_profile() {
     _app="${_name_title}.app"
     _path_macos="/Applications/${_app}/Contents/MacOS"
     _path_profile="${_profiles}/${_name_lower}"
-    echo '# Creating Firefox profile'
-    echo "#   profile_path: ${_path_profile/${HOME}/~}"
+    print_header_2 'Creating Firefox profile'
+    echo "${I4}profile_path: ${_path_profile/${HOME}/~}"
     # Return immediately if profile already exists
-    if [[ -d "${_path_profile}" ]]; then
-        echo '#     (no-op: profile already exists)'
+    if [[ -d "${_path_profile}" ]]
+    then
+        echo "${I8}(no-op: profile already exists)"
         return 0
     else
-        printf '#   '
+        printf '%s' "${I8}"
         _status=$("${_path_macos}/firefox-bin" -CreateProfile \
                     "${_label_title} ${_path_profile}")
         printf '%s' "${_status}"
@@ -71,22 +101,38 @@ clone_firefox_app() {
     local _app _name_title
     _name_title="${1}"
     _app="${_name_title}.app"
-    echo '# Copying Firefox application bundle'
-    echo "#   new application bundle name: ${_name_title}"
+    print_header_2 'Copying Firefox application bundle'
+    echo "${I4}new application bundle name: ${_name_title}"
     pushd /Applications >/dev/null
 
-    # Remove previously created App Bundle
-    if [[ -d "${_app}" ]]; then
-        rm -rf "${_app}"
-    fi
     # Remove previous and copy App Bundle
     rm -rf "${_app}"
     cp -a 'Firefox.app' "${_app}/"
     # Verify code signature
-    echo '#   verifying app bundle code signature'
-    codesign -v "${_app}"
+    echo "${I4}verifying app bundle code signature"
+    codesign --verify "${_app}"
 
     popd >/dev/null
+}
+
+
+print_header_1() {
+    # Print 80 character wide black on white heading with time
+    printf "${E30}${E107}# %-70s$(date '+%T') ${E0}\n" "${@}"
+}
+
+
+print_header_2() {
+    # Print bright white heading
+    printf "${E97}%s${E0}\n" "${@}"
+}
+
+
+
+print_help() {
+    # Print help/usage
+    echo "${USAGE}"
+    exit
 }
 
 
@@ -95,15 +141,25 @@ remove_app_signature() {
     _name_title="${1}"
     _app="${_name_title}.app"
     pushd /Applications >/dev/null
-
     # Remove code signature
-    echo '#   removing Mozilla Corporatio code signature'
-    codesign --remove-signature "${_app}"
+    echo "${I4}removing Mozilla Corporation code signature"
+    codesign --remove-signature --deep "${_app}"
     # Remove com.apple.quarantine
-    echo '#   removing quarantine'
+    echo "${I4}removing quarantine"
     xattr -rd com.apple.quarantine "${_app}"
-    #xattr -r -d com.apple.macl "${_app}"
+    popd >/dev/null
+}
 
+
+remove_misc() {
+    local _app _name_title
+    _name_title="${1}"
+    _app="${_name_title}.app"
+    pushd /Applications >/dev/null
+    echo "${I4}removing updater"
+    rm -rf "${_app}/Contents/MacOS/crashreporter.app"
+    rm -f "${_app}/Contents/CodeResources"
+    rm -f "${_app}/Contents/embedded.provisionprofile"
     popd >/dev/null
 }
 
@@ -113,72 +169,66 @@ remove_updater() {
     _name_title="${1}"
     _app="${_name_title}.app"
     pushd /Applications >/dev/null
-
-    # Remove Updater
-    echo '#   removing updater'
+    echo "${I4}removing updater"
     rm -rf "${_app}/Contents/Library"
     rm -rf "${_app}/Contents/MacOS/updater.app"
     rm -f "${_app}/Contents/Resources/updater.ini"
     rm -f "${_app}/Contents/Resources/update-settings.ini"
-
     popd >/dev/null
 }
 
 
-update_app_icon() {
-    local _app _icon_color _icon_icns _icon_name _icon_png _name_lower
-    local _name_title _path_app _path_contents
-    local -i _icon_icns_exists _icon_name_exists
+sign_app() {
+    local _app _name_lower _name_title
     _name_title="${1}"
     _name_lower="${2}"
-    _icon_color="${3}"
+    _app="${_name_title}.app"
+    pushd /Applications >/dev/null
+    printf '%s' "${I4}"
+    codesign --sign=- \
+        --deep \
+        --force \
+        --identifier="${_name_lower}" \
+        --strip-disallowed-xattrs \
+        -vvv \
+        "${_app}"
+    popd >/dev/null
+}
+
+
+touch_app() {
+    local _app _name_title _path_app _path_contents
+    _name_title="${1}"
     _app="${_name_title}.app"
     _path_app="/Applications/${_app}"
     _path_contents="${_path_app}/Contents"
+    # Ensure Finder sees changes
+    #   https://gist.github.com/fabiofl/5873100#gistcomment-1240299
+    touch "${_path_app}"
+    touch "${_path_contents}/MacOS/firefox"
+    touch "${_path_contents}/Resources/application.ini"
+}
+
+
+update_app_icon() {
+    local _app _icon_color _icon_png _outputi _name_title _path_app
+    _name_title="${1}"
+    _icon_color="${2}"
+    _app="${_name_title}.app"
+    _path_app="/Applications/${_app}"
     _icon_png="icons/icons8-firefox-480-${_icon_color}.png"
-    _icon_icns="build/firefox-${_icon_color}.icns"
-    _icon_icns_exists=0
-    _icon_name="build/${name_lower}.icns"
-    _icon_name_exists=0
-    # Generate Icon
-    if [[ -f "${_icon_name}" ]]; then
-        echo "#   using existing icon: ${_icon_name}"
-        _icon_name_exists=1
-    elif [[ -f "${_icon_png}" ]]; then
-        echo "#   icon color: ${_icon_color}"
-        if [[ -f "${_icon_icns}" ]]; then
-            _icon_icns_exists=1
-        else
-            if which -s makeicns; then
-                echo "#   generating: ${_icon_icns}"
-                echo "#     from: ${_icon_png}"
-                makeicns -in "${_icon_png}" -out "${_icon_icns}"
-                _icon_icns_exists=1
-            else
-                echo '#   makeicns is not installed. Unable to generate icons.'
-                echo '#     (resolve with `brew install makeicns`)'
-            fi
-        fi
-        if (( _icon_icns_exists == 1 )); then
-            echo "#   creating symlinking: ${_icon_name}"
-            echo "#     source: ${_icon_icns}"
-            pushd build >/dev/null
-            ln -s "${_icon_icns##*/}" "${_icon_name##*/}"
-            _icon_name_exists=1
-            popd >/dev/null
-        fi
+    print_header_2 "Updating ${_name_title} application icon"
+    if command -v fileicon >/dev/null
+    then
+        # Replace original icon
+        _output=$(fileicon set "${_path_app}" "${_icon_png}")
+        echo "${I4}${_output%%based on*}"
+        echo "${I8}based on${_output##*based on}"
     else
-        echo "#   icon source file missing: ${_icon_png}"
-        echo '#     unable to generate icns file and symlink to it'
-    fi
-    # Replace Icon
-    if (( _icon_name_exists == 1 )); then
-        echo '#   copying application icon into place'
-        cp "build/${name_lower}.icns" \
-            "${_path_contents}/Resources/firefox.icns"
-    else
-        echo "#   file/symlink does not exist: ${_icon_name}"
-        echo '#     skipping application icon update'
+        printf '%s' "${E33}${I4}fileicon is not installed. Unable to generate"
+        echo " icons.${E0}"
+        echo "${E33}${I8}(resolve with \`brew install fileicon\`)${E0}"
+        return
     fi
 }
 
@@ -198,78 +248,21 @@ update_app_info() {
     _icon_icns_exists=0
     _icon_name="build/${name_lower}.icns"
     _icon_name_exists=0
-    # Update Info.plist
-    echo '#   updating Info.plist'
-        # remove from sed, below, as it doesn't work
-        # (app in top menu is still named Firefox)
-        #-e"s#>Firefox#>${_name_title}#" \
-    sed \
-        -e"s#>firefox<#>${_name_lower}<#" \
-        -e"s#>org.mozilla.firefox<#>org.mozilla.${_name_lower}<#" \
-        -i.bak \
+    echo "${I4}updating Info.plist"
+    echo "${I8}modifying CFBundleExecutable"
+    /usr/libexec/PlistBuddy -c "Set :CFBundleExecutable ${_name_lower}" \
         "${_path_contents}/Info.plist"
-    rm -f "${_path_contents}/Info.plist.bak"
-    # Disabled as rename doesn't work (app in top menu is still named Firefox)
-    ## Update application.ini
-    #echo '#   updating application.ini'
-    #sed \
-    #    -e"s#=Firefox#=${_name_title}#" \
-    #    -e"s#=firefox#=${_name_lower}#" \
-    #    -i.bak \
-    #    "${_path_contents}/Resources/application.ini"
-    #rm -f "${_path_contents}/Resources/application.ini.bak"
-}
-
-
-add_launch_script() {
-    local _app _name_lower _name_title _path_app _path_contents _path_macos
-    local _path_profile _profiles
-    _name_title="${1}"
-    _name_lower="${2}"
-    _profiles="${3}"
-    _app="${_name_title}.app"
-    _path_app="/Applications/${_app}"
-    _path_contents="${_path_app}/Contents"
-    _path_macos="/Applications/${_app}/Contents/MacOS"
-    _path_profile="${_profiles}/${_name_lower}"
-    echo '#   creating launcher script'
-    {
-        echo '#!/bin/sh'
-        echo "${_path_macos}/firefox \\"
-        echo "    -no-remote \\"
-        echo "    --profile \\"
-        echo "    '${_path_profile}'"
-        #echo "    2>/dev/null &"
-    } > "${_path_macos}/${_name_lower}"
-    chmod 0755 "${_path_macos}/${_name_lower}"
-    echo "#     script name: ${_name_lower}"
-}
-
-
-pseudo_sign_binary() {
-    local _app _name_title
-    _name_title="${1}"
-    _app="${_name_title}.app"
-    pushd /Applications >/dev/null
-
-    echo '#   pseduo-signing firefox binary'
-    ldid -S "${_app}/Contents/MacOS/firefox"
-
-    popd >/dev/null
-}
-
-
-touch_app() {
-    local _app _name_title _path_app _path_contents
-    _name_title="${1}"
-    _app="${_name_title}.app"
-    _path_app="/Applications/${_app}"
-    _path_contents="${_path_app}/Contents"
-    # Ensure Finder sees changes
-    #   https://gist.github.com/fabiofl/5873100#gistcomment-1240299
-    touch "${_path_app}"
-    touch "${_path_contents}/Info.plist"
-    touch "${_path_contents}/Resources/application.ini"
+    echo "${I8}modifying CFBundleIdentifier"
+    /usr/libexec/PlistBuddy -c \
+        "Set :CFBundleIdentifier ${_name_lower}" \
+        "${_path_contents}/Info.plist"
+    echo "${I8}modifying CFBundleName"
+    /usr/libexec/PlistBuddy -c \
+        "Set :CFBundleName ${_name_title}" \
+        "${_path_contents}/Info.plist"
+    echo "${I8}deleting SMPrivilegedExecutables"
+    /usr/libexec/PlistBuddy -c 'Delete :SMPrivilegedExecutables' \
+        "${_path_contents}/Info.plist"
 }
 
 
@@ -281,12 +274,8 @@ while [[ -n "${1:-}" ]]; do
     case "${1}" in
         -h | -help | --help | Help | help )
             shift
-            help_print
+            print_help
             ;;
-        #-n | --noop )
-        #    shift
-        #    opt_noop='--noop'
-        #    ;;
         -- )
             shift
             ;;
@@ -297,23 +286,26 @@ while [[ -n "${1:-}" ]]; do
     esac
 done
 (( ${#ARGS[@]} > 0 )) || ARGS=(Home:navy Work:gray)
-mkdir -p build
-for name_color in "${ARGS[@]}"; do
+
+for name_color in "${ARGS[@]}"
+do
     label_title=${name_color%%:*}
     icon_color=${name_color##*:}
     [[ "${label_title}" != "${icon_color}" ]] || icon_color='orange'
     label_lower="$(echo "${label_title}" | tr '[:upper:]' '[:lower:]')"
     name_title="Firefox-${label_title}"
     name_lower="firefox-${label_lower}"
-    echo "### ${label_title}"
+    print_header_1 "${name_title}"
     clone_firefox_app "${name_title}"
-    echo "# Updating ${name_title} application bundle"
+    print_header_2 "Updating ${name_title} application bundle"
+    remove_misc "${name_title}"
     remove_updater "${name_title}"
     remove_app_signature "${name_title}"
-    update_app_icon "${name_title}" "${name_lower}" "${icon_color}"
     update_app_info "${name_title}" "${name_lower}" "${icon_color}"
     add_launch_script "${name_title}" "${name_lower}" "${PROFILES}"
-    pseudo_sign_binary "${name_title}"
+    touch_app "${name_title}"
+    sign_app "${name_title}" "${name_lower}"
+    update_app_icon "${name_title}" "${icon_color}"
     touch_app "${name_title}"
     create_profile "${name_title}" "${name_lower}" "${label_title}" \
         "${PROFILES}"
